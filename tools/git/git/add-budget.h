@@ -31,21 +31,21 @@ struct git_add_block_plan {
 };
 
 /*
- * Return the deterministic block number for a zero-based breadth-first
- * ordinal and its cumulative byte position. Callers must perform the actual
- * pathname traversal and object-size accounting; this type deliberately
- * contains no filesystem assumptions.
+ * Return the 1-based block number that a cumulative byte position falls in.
+ * A cumulative size of 0 bytes is reported as block 1. Callers must perform
+ * the actual pathname traversal and object-size accounting; this API
+ * deliberately contains no filesystem assumptions.
+ *
+ * The single authoritative definition lives in add-budget.c.
  */
-static inline uintmax_t git_add_block_for_bytes(uintmax_t cumulative_bytes)
-{
-	return cumulative_bytes / GIT_ADD_BLOCK_BYTES;
-}
+uintmax_t git_add_block_for_bytes(uintmax_t cumulative_bytes);
 
-static inline int git_add_block_would_cross_boundary(uintmax_t block_bytes,
-						uintmax_t object_bytes)
-{
-	return block_bytes &&
-		object_bytes > GIT_ADD_BLOCK_BYTES - block_bytes;
-}
+/*
+ * Return non-zero when appending object_bytes to a block that already holds
+ * current_bytes would push the running total across a 100 MiB block boundary.
+ * Overflow of the running total is treated as crossing a boundary.
+ */
+int git_add_block_would_cross_boundary(uintmax_t current_bytes,
+					uintmax_t object_bytes);
 
 #endif /* GIT_ADD_BUDGET_H */
