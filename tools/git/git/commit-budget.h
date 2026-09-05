@@ -58,4 +58,20 @@ static inline uintmax_t git_commit_part_count_for_push(uintmax_t units)
 	return (units + GIT_COMMIT_PUSH_PARTS - 1) / GIT_COMMIT_PUSH_PARTS;
 }
 
+/*
+ * Validate a fully-populated plan record. Returns 0 when the record is
+ * internally consistent with the compiled policy, negative otherwise.
+ * The authoritative definition lives in commit-budget.c.
+ */
+int git_commit_part_plan_validate(const struct git_commit_part_plan *plan);
+
+/*
+ * Return the number of 50 MiB units carried by push number push_index
+ * (1-based) when a plan of the given size is split into 200 MiB pushes.
+ * Returns 0 when push_index is beyond the last push. The authoritative
+ * definition lives in commit-budget.c.
+ */
+uintmax_t git_commit_part_units_for_push(uintmax_t units,
+					 unsigned int push_index);
+
 #endif /* GIT_COMMIT_BUDGET_H */

@@ -41,6 +41,7 @@
 #include "help.h"
 #include "commit-reach.h"
 #include "commit-graph.h"
+#include "commit-budget.h"
 #include "pretty.h"
 #include "trailer.h"
 
@@ -128,6 +129,7 @@ static int edit_flag = -1; /* unspecified */
 static int quiet, verbose, no_verify, allow_empty, dry_run, renew_authorship;
 static int config_commit_verbose = -1; /* unspecified */
 static int no_post_rewrite, allow_empty_message, pathspec_file_nul;
+static int commit_parts; /* Ubuntu Determinant: integer 50 MiB commit units */
 static const char *untracked_files_arg, *force_date, *ignore_submodule_arg, *ignored_arg;
 static const char *sign_commit, *pathspec_from_file;
 static struct strvec trailer_args = STRVEC_INIT;
@@ -1695,6 +1697,42 @@ static int git_commit_config(const char *k, const char *v,
 	return git_status_config(k, v, ctx, s);
 }
 
+/*
+ * Ubuntu Determinant native commit-part planning.
+ *
+ * Interprets "--parts=N" as a request for N ordered 50 MiB logical commit
+ * units, builds and validates the shared plan record, and reports the
+ * derived logical size and the number of 200 MiB pushes it implies. This is
+ * reporting-only: the actual commit is unchanged. Returns 0 on success or a
+ * negative value when the requested unit count is rejected by the policy.
+ */
+static int report_commit_part_plan(unsigned int units)
+{
+	struct git_commit_part_plan plan;
+	uintmax_t pushes;
+	uintmax_t p;
+
+	if (git_commit_part_plan_init(&plan, units) < 0 ||
+	    git_commit_part_plan_validate(&plan) < 0)
+		return error(_("invalid --parts value: %u"), units);
+
+	pushes = git_commit_part_count_for_push(plan.requested_units);
+	fprintf(stderr,
+		_("Git commit part plan: %" PRIuMAX " unit(s) of %" PRIuMAX
+		  " bytes = %" PRIuMAX " logical bytes, %" PRIuMAX
+		  " push(es) of %u units\n"),
+		plan.requested_units, plan.part_bytes, plan.logical_bytes,
+		pushes, GIT_COMMIT_PUSH_PARTS);
+
+	for (p = 1; p <= pushes; p++)
+		fprintf(stderr,
+			_("  push %" PRIuMAX ": %" PRIuMAX " unit(s)\n"),
+			p, git_commit_part_units_for_push(plan.requested_units,
+							  (unsigned int)p));
+
+	return 0;
+}
+
 int cmd_commit(int argc,
 	       const char **argv,
 	       const char *prefix,
@@ -1747,6 +1785,8 @@ int cmd_commit(int argc,
 		OPT_DIFF_UNIFIED(&interactive_opts.context),
 		OPT_DIFF_INTERHUNK_CONTEXT(&interactive_opts.interhunkcontext),
 		OPT_BOOL('o', "only", &only, N_("commit only specified files")),
+		OPT_INTEGER(0, "parts", &commit_parts,
+			    N_("plan the commit as N ordered 50 MiB units")),
 		OPT_BOOL('n', "no-verify", &no_verify, N_("bypass pre-commit and commit-msg hooks")),
 		OPT_BOOL(0, "dry-run", &dry_run, N_("show what would be committed")),
 		OPT_SET_INT(0, "short", &status_format, N_("show status concisely"),
@@ -1832,6 +1872,12 @@ int cmd_commit(int argc,
 		cleanup_config = xstrdup(cleanup_arg);
 	}
 	cleanup_mode = get_cleanup_mode(cleanup_config, use_editor);
+
+	if (commit_parts < 0)
+		die(_("--parts cannot be negative"));
+	if (commit_parts > 0 &&
+	    report_commit_part_plan((unsigned int)commit_parts) < 0)
+		return 1;
 
 	if (dry_run)
 		return dry_run_commit(argv, prefix, current_head, &s);

@@ -27,6 +27,7 @@
 #include "submodule.h"
 #include "add-interactive.h"
 #include "merge-ll.h"
+#include "add-budget.h"
 
 static const char * const builtin_add_usage[] = {
 	N_("git add [<options>] [--] <pathspec>..."),
@@ -452,6 +453,72 @@ static int add_resolved_files(struct repository *repo,
 	return exit_status;
 }
 
+/*
+ * Ubuntu Determinant native add-block reporting.
+ *
+ * Walks the index entries selected by the pathspec in deterministic
+ * pathname order (the index is kept sorted by name), accumulates their
+ * blob-object sizes, and groups them into 100 MiB blocks using the shared
+ * add-budget policy. This is reporting-only by default; setting
+ * GIT_ADD_ENFORCE_BLOCKS=1 turns a plan that spans more than one block into
+ * a hard error so a single "git add" effort stays within one 100 MiB block.
+ */
+static int report_add_block_plan(struct repository *repo,
+				 const struct pathspec *pathspec)
+{
+	struct index_state *istate = repo->index;
+	uintmax_t cumulative = 0;
+	uintmax_t block_bytes = 0;
+	uintmax_t path_count = 0;
+	uintmax_t blocks;
+	int enforce;
+	const char *env;
+	size_t i;
+
+	if (!istate || !pathspec->nr)
+		return 0;
+
+	env = getenv("GIT_ADD_ENFORCE_BLOCKS");
+	enforce = env && !strcmp(env, "1");
+
+	for (i = 0; i < istate->cache_nr; i++) {
+		struct cache_entry *ce = istate->cache[i];
+		size_t size = 0;
+
+		if (ce_stage(ce))
+			continue;
+		if (!ce_path_match(istate, ce, pathspec, NULL))
+			continue;
+
+		if (odb_read_object_info(repo->objects, &ce->oid, &size) < 0)
+			continue;
+
+		if (git_add_block_would_cross_boundary(block_bytes, size))
+			block_bytes = 0;
+		block_bytes += (uintmax_t)size;
+		cumulative += (uintmax_t)size;
+		path_count++;
+	}
+
+	if (!path_count)
+		return 0;
+
+	blocks = git_add_block_for_bytes(cumulative);
+	fprintf(stderr,
+		_("Git add block plan: %" PRIuMAX " path(s), %" PRIuMAX
+		  " bytes, %" PRIuMAX " block(s) of %" PRIuMAX " bytes\n"),
+		path_count, cumulative, blocks, GIT_ADD_BLOCK_BYTES);
+
+	if (enforce && blocks > 1) {
+		error(_("git add rejected: selection spans %" PRIuMAX
+			" 100 MiB blocks (GIT_ADD_ENFORCE_BLOCKS=1)"), blocks);
+		error(_("stage fewer paths so a single add stays within one block."));
+		return -1;
+	}
+
+	return 0;
+}
+
 int cmd_add(int argc,
 	    const char **argv,
 	    const char *prefix,
@@ -657,6 +724,11 @@ int cmd_add(int argc,
 		free(seen);
 		free(skip_worktree_seen);
 		string_list_clear(&only_match_skip_worktree, 0);
+	}
+
+	if (!show_only && report_add_block_plan(repo, &pathspec) < 0) {
+		exit_status = 1;
+		goto finish;
 	}
 
 	odb_transaction_begin_or_die(repo->objects, &transaction, 0);
