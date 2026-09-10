@@ -473,3 +473,59 @@ covers the **10× redundant payload** plus the persisted metamatrix plus slack.
 > exclude the OS/application base and the file-data page cache. SSD figures
 > assume 1 GB = 1 GiB, images already compressed (10× applies to compressed
 > bytes), and exclude the block device's own allocation granularity.
+
+
+---
+
+## 13. Health monitoring — `tac3healthctl`
+
+TAC3 installs a dedicated OS-resident **health monitor**, `tac3healthctl`
+(`tools/tac3health/`), alongside the offline diagnostic `tac3ctl`. Where
+`tac3ctl` reasons about the model without a disk, `tac3healthctl` watches a
+**live** mount by reading the module's authoritative interface at
+`/proc/tac3/{status,health,admin}`.
+
+### 13.1 What it monitors
+
+- **Health** — file-table health, each layer's `disk_health`, and the layer /
+  file-table green/white/yellow state (no red-alarm, matching `fs/tac3`).
+- **Errors** — layers in a non-GREEN / attention state, and average read
+  *pressure* crossing a configurable per-mille threshold (default 800).
+- **Alterations** — drift from a saved **baseline** of the trusted facts:
+  `multitude`, `device_class`, `tech_id`, layer count, and a backward regression
+  of `admin_table_revision`. Any unexpected change is flagged as an alteration.
+
+### 13.2 Usage
+
+```sh
+tac3healthctl check                 # one-shot; exit 0/1/2/3 = GREEN/WHITE/YELLOW/NO-MOUNT
+tac3healthctl baseline              # record trusted topology/admin facts (run once mounted)
+tac3healthctl watch --interval 15   # daemon: log to the journal on every state change
+```
+
+Options: `--proc DIR` (default `/proc/tac3`), `--baseline FILE`
+(default `/var/lib/tac3/baseline`), `--pressure P`, `--interval S`, `--once`.
+The integer exit codes make it scriptable for cron and monitoring hooks.
+
+### 13.3 Install and always-on service
+
+```sh
+tools/tac3health/build.sh                 # or: make -C tools/tac3health
+tools/tac3health/install.sh               # installs the binary (default /usr/local/bin)
+make -C tools/tac3health install-service  # + systemd unit (optional)
+# then, with a TAC3 volume mounted:
+tac3healthctl baseline
+systemctl enable --now tac3health.service
+```
+
+The tool is registered in `installer/install-manifest.txt`
+(`tac3healthctl|tools/tac3health|tac3healthctl|1`) so the binary installer places
+it in `/user/bin` and `/deck/bin`, and it is wired into `tools/Makefile`. A
+hardened `tac3health.service` (read-only monitor, `NoNewPrivileges`,
+`ProtectSystem=strict`) provides always-on journal monitoring.
+
+### 13.4 Ethics
+
+`tac3healthctl` reports **file-system** health, errors, and alterations only. It
+reads administrative facts and opaque operator values from Table 3 and never
+computes or judges any human attribute.
