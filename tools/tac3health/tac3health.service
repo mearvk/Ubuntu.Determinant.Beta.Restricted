@@ -1,0 +1,28 @@
+# systemd unit — always-on TAC3 health monitor.
+# Install: make -C tools/tac3health install-service
+# Enable:  systemctl daemon-reload && systemctl enable --now tac3health.service
+#
+# Watches /proc/tac3 and logs to the journal on every state change. Alteration
+# detection requires a saved baseline: run `tac3healthctl baseline` once after
+# mounting the TAC3 volume (and again intentionally after any authorized change
+# to multitude / device class / topology).
+[Unit]
+Description=TAC3 filesystem health monitor
+Documentation=man:tac3healthctl FILE.SYSTEM.md
+After=local-fs.target
+
+[Service]
+Type=simple
+# Poll every 15s; print (to the journal) only when the health level changes.
+ExecStart=/usr/local/bin/tac3healthctl watch --interval 15 --baseline /var/lib/tac3/baseline
+Restart=on-failure
+RestartSec=5
+# Hardening: read-only monitor, no new privileges, private tmp.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/tac3
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
