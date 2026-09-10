@@ -21,6 +21,7 @@
 // Author: Maximilian Eric Alexander Rupplin von Keffikon
 //
 #include "tac3.hpp"
+#include "tac3_grid.hpp"
 
 #include <cstdio>
 #include <cstring>
@@ -56,6 +57,8 @@ static void usage(const char *argv0) {
         "Commands:\n"
         "  info                 Print the TAC3 model summary (default).\n"
         "  simulate             Run an offline wear/pressure/health simulation.\n"
+        "  grid                 Show the per-layer SQUARE linkage model and\n"
+        "                       simulate ordinary neighbor wiring over a block.\n"
         "  help                 Show this help.\n\n"
         "Options (for simulate):\n"
         "  --multitude <n>      Redundancy layers (1..%u, default %u).\n"
@@ -64,6 +67,10 @@ static void usage(const char *argv0) {
         "  --reads <n>          Simulated reads to region 0 (default 8).\n"
         "  --writes <n>         Simulated writes to region 0 (default 4).\n"
         "  --jarring <n>        Simulated jarring accesses (default 0).\n\n"
+        "Options (for grid):\n"
+        "  --conn <4|8>         Neighbor connectivity: 4 orthogonal or 8 with\n"
+        "                       diagonals (default 8).\n"
+        "  --block <n>          Wire an n x n block from the origin (default 8).\n\n"
         "When the kernel module is loaded, live per-mount numbers are in\n"
         "/proc/tac3/{status,health,admin}; this tool works offline.\n",
         argv0, kMultMax, kMultDefault);
@@ -128,6 +135,57 @@ static void cmd_simulate(std::uint32_t mult, DeviceClass cls,
                 e.multitude());
 }
 
+// Show the per-layer SQUARE linkage model, then wire an n x n block with the
+// "ordinary" neighbor path and report how the degree distribution stays within
+// the soft cap (2) with degree>2 remaining rare, plus memory/search facts.
+static void cmd_grid(Connectivity conn, unsigned block) {
+    std::printf("TAC3 per-layer SQUARE linkage (subject medium)\n");
+    std::printf("----------------------------------------------\n");
+    std::printf("%-26s: %u x %u  (= %u regions)\n", "grid geometry",
+                Tac3LayerGrid::side(), Tac3LayerGrid::side(),
+                Tac3LayerGrid::regions());
+    std::printf("%-26s: id = (row<<%u)|col  -> O(1) bit-math, 0 stored bytes\n",
+                "coordinate mapping", kGridShift);
+    std::printf("%-26s: %u-connectivity (%s)\n", "neighbors",
+                (unsigned)conn, conn == Connectivity::Eight
+                    ? "orthogonal + diagonal" : "orthogonal only");
+    std::printf("%-26s: soft %u (ordinary), hard %u (fixed inline storage)\n",
+                "degree caps", kLinkSoftCap, kLinkHardCap);
+    std::printf("%-26s: round(%u * log2(1 + distance))%s\n", "link cost",
+                kLinkCostK, " ; +surcharge on the rare 3rd/4th link");
+    std::printf("%-26s: %zu bytes/cell -> %zu KiB per layer (contiguous, no per-cell alloc)\n",
+                "memory", sizeof(Tac3CellLinks),
+                (sizeof(Tac3CellLinks) * (std::size_t)Tac3LayerGrid::regions()) / 1024);
+
+    if (block < 1) block = 1;
+    if (block > Tac3LayerGrid::side()) block = Tac3LayerGrid::side();
+
+    Tac3LayerGrid g;
+    for (std::uint32_t r = 0; r < block; ++r)
+        for (std::uint32_t c = 0; c < block; ++c)
+            g.link_to_neighbors(grid_id(r, c), conn);
+
+    Tac3LayerGrid::Stats s = g.stats();
+    std::printf("\nOrdinary wiring of a %u x %u block:\n", block, block);
+    std::printf("%-26s: %u\n", "linked cells", s.linked_cells);
+    std::printf("%-26s: %llu\n", "undirected links",
+                (unsigned long long)s.total_links);
+    std::printf("%-26s: %llu (sum of log-falloff link costs)\n", "total cost",
+                (unsigned long long)s.total_cost);
+    std::printf("%-26s: deg0=%u deg1=%u deg2=%u deg3=%u deg4=%u\n",
+                "degree histogram",
+                s.degree_hist[0], s.degree_hist[1], s.degree_hist[2],
+                s.degree_hist[3], s.degree_hist[4]);
+    std::printf("%-26s: %u cell(s) above the soft cap", "rare (degree>2)",
+                s.rare_cells);
+    if (s.linked_cells)
+        std::printf("  (%.1f%% of linked cells)",
+                    100.0 * (double)s.rare_cells / (double)s.linked_cells);
+    std::printf("\n\nFirmness: each cell's low-cost neighbors are recovery sources\n");
+    std::printf("in addition to the N-way layer redundancy, so an assailed cell\n");
+    std::printf("stays recoverable without a full-layer scan.\n");
+}
+
 int main(int argc, char **argv) {
     const char *cmd = (argc > 1) ? argv[1] : "info";
 
@@ -155,6 +213,25 @@ int main(int argc, char **argv) {
             else { std::fprintf(stderr, "tac3ctl: unknown option '%s'\n", a); return 2; }
         }
         cmd_simulate(mult, cls, reads, writes, jarring);
+        return 0;
+    }
+    if (std::strcmp(cmd, "grid") == 0) {
+        Connectivity conn = Connectivity::Eight;
+        unsigned block = 8;
+        for (int i = 2; i < argc; ++i) {
+            const char *a = argv[i];
+            const char *v = (i + 1 < argc) ? argv[i + 1] : nullptr;
+            if (std::strcmp(a, "--conn") == 0 && v) {
+                int n = std::atoi(v);
+                if (n == 4) conn = Connectivity::Four;
+                else if (n == 8) conn = Connectivity::Eight;
+                else { std::fprintf(stderr, "tac3ctl: --conn must be 4 or 8\n"); return 2; }
+                ++i;
+            }
+            else if (std::strcmp(a, "--block") == 0 && v) { block = (unsigned)std::atoi(v); ++i; }
+            else { std::fprintf(stderr, "tac3ctl: unknown option '%s'\n", a); return 2; }
+        }
+        cmd_grid(conn, block);
         return 0;
     }
 
