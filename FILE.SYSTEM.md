@@ -351,3 +351,125 @@ metadata contributes the trailing ~0.03 %.)
 > add a little, independent of TAC3). Compression is not assumed; images are
 > typically already compressed, so the 10× replication applies to the compressed
 > bytes.
+
+
+---
+
+## 12. The per-file metamatrix ("quality of quality") and its hardware
+
+TAC3's flavor is completed by a **per-file metamatrix**: a rich, RAM-resident
+record describing *the quality of the file itself* — not the person, not the
+content's meaning, only observable file qualities. It sits alongside the three
+tables as a fourth structure, with a small **cousin rolled up off Admin
+(Table 3)**.
+
+### 12.1 Requirements
+
+- Each file carries a metamatrix of **≥ 224 quality points** about the file.
+- Of those points, **5–10 adverbs** (short descriptive qualifiers) and
+  **2–24 integers** (numeric quality points) are operator/engine supplied; the
+  remainder are fixed-schema quality scalars.
+- The metamatrix is kept per **logical file** (shared across the N redundancy
+  layers, like Table 1 — not duplicated per replica).
+- A **metamatrix cousin** hangs off Admin: a per-mount rollup/index so the
+  admin surface can summarize metamatrix state without scanning every file.
+- The metamatrix **mainly lives in RAM** (RAM-resident, SSD write-back), because
+  it is read on nearly every access and must be fast.
+- The ethics boundary is unchanged: adverbs and integers are **opaque
+  operator/engine file-quality values**. TAC3 assigns them no meaning about any
+  person; they describe files.
+
+### 12.2 Best-method encoding — a fixed 512 B record
+
+To hold ≥ 224 points fast and compactly, the record is a **fixed layout** (no
+per-file heap allocation, no variable-length blobs), with adverbs stored as
+**interned dictionary IDs** rather than strings:
+
+| Field | Encoding | Bytes |
+|-------|----------|------:|
+| Header | ino + schema rev + counts + flags | 16 |
+| Adverbs (≤ 10) | `uint16` dictionary IDs into a shared adverb vocabulary | 20 |
+| Integers (≤ 24) | `int32` each | 96 |
+| Fixed quality scalars (190) | `uint16` per-mille (0..1000) each | 380 |
+| **Total points** | 10 + 24 + 190 = **224** | **512 B** (8-aligned) |
+
+```c++
+struct Tac3MetaMatrix {          // per LOGICAL file; 512 B, cache/page friendly
+    uint64 ino;                  // the file this describes
+    uint16 schema_rev;
+    uint8  n_adverbs;            // 5..10 in use
+    uint8  n_ints;               // 2..24 in use
+    uint32 flags;
+    uint16 adverb[10];           // interned IDs into the shared adverb table
+    int32  qint[24];             // operator/engine integer quality points
+    uint16 qscalar[190];         // fixed per-mille quality scalars (>=224 total)
+};                               // == 512 bytes
+```
+
+- **Adverb vocabulary** is a single shared, interned table per mount (a few KiB
+  total); files reference adverbs by ID, so adding the 200,000th "crisp" file
+  costs 2 bytes, not a string.
+- **512 B** is a clean fraction of a 4 KiB page — eight metamatrix records per
+  page — which keeps the RAM-resident array dense and the SSD write-back aligned.
+
+### 12.3 The Admin cousin
+
+A compact structure hanging off Table 3 (Admin), fixed per mount (~64 KiB): a
+rollup of metamatrix population (counts, adverb-frequency histogram, per-mille
+quality aggregates) plus an index (ino → metamatrix slot). It lets the admin
+surface answer "what is the fleet-wide file quality" without walking every
+record, and carries the same opaque-value ethics note as the rest of Table 3.
+
+### 12.4 RAM footprint (the metamatrix is per logical file)
+
+At **512 B per file**, RAM-resident:
+
+| File count | Metamatrix RAM | + Admin cousin |
+|-----------:|---------------:|---------------:|
+| 1,000 | 500 KiB | 564 KiB |
+| 10,000 | 4.9 MiB | 4.9 MiB |
+| 100,000 | 48.8 MiB | 48.9 MiB |
+| 1,000,000 | 488 MiB | 488 MiB |
+| 10,000,000 | 4.77 GiB | 4.77 GiB |
+| 100,000,000 | 47.68 GiB | 47.68 GiB |
+
+For the **1 GB-of-images** reference workload the metamatrix is trivial: 256
+4 MB photos → 128 KiB; even ~21,000 50 KB thumbnails → ~10 MiB of RAM.
+
+### 12.5 Required hardware (SSD + RAM)
+
+The metamatrix is RAM-resident with SSD write-back; the wear/grid tables
+(~3 MB/mount, §11) also live in RAM. **Sizing rule:** provision RAM ≈ 2× the
+resident metamatrix (record cache + index + OS + application), floor 4 GiB; SSD
+covers the **10× redundant payload** plus the persisted metamatrix plus slack.
+
+| Tier | Files | Metamatrix | **RAM (recommended)** | **SSD (10× payload + meta)** |
+|------|------:|-----------:|----------------------:|-----------------------------:|
+| Personal / small mount | 100,000 | 0.05 GB | **4 GiB** | **512 GiB** |
+| Workstation | 1,000,000 | 0.48 GB | **4 GiB** | **8 TiB** |
+| Server | 10,000,000 | 4.77 GB | **16 GiB** | **64 TiB** |
+| Large archive | 100,000,000 | 47.68 GB | **128 GiB** | **512 TiB** |
+
+**SSD guidance (best methods):**
+- Use **NVMe** (Gen4/Gen5) — TAC3's quality/pressure engine scales against the
+  device speed ceiling (7000 / 14000 MB/s for Gen4/Gen5), so faster media yields
+  higher recorded read *quality* and lower *pressure*.
+- Provision for **10× the logical image data** (the redundancy floor) plus a few
+  GB for the persisted metamatrix and tables; keep **10–20 % free** for wear
+  leveling and write-back headroom.
+- Endurance matters: 10× replication multiplies writes ~10×, so prefer
+  higher-DWPD (or larger, over-provisioned) drives on write-heavy mounts.
+
+**RAM guidance:**
+- The metamatrix is the RAM driver: **~0.5 GB of RAM per 1,000,000 files**
+  (512 B each), doubled for cache/index/OS headroom.
+- ECC RAM is recommended for server/archive tiers, since the metamatrix is the
+  authoritative in-memory quality state between write-backs.
+- The wear + grid tables add only ~3 MB/mount, so they are a rounding error next
+  to the metamatrix.
+
+> **Assumptions.** "Points" counts adverbs + integers + fixed scalars = 224;
+> RAM figures are the resident record arrays (metamatrix + admin cousin) and
+> exclude the OS/application base and the file-data page cache. SSD figures
+> assume 1 GB = 1 GiB, images already compressed (10× applies to compressed
+> bytes), and exclude the block device's own allocation granularity.
