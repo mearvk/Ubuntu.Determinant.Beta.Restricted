@@ -264,3 +264,90 @@ and included by `tac3ctl.cpp`, so no build wiring changes are required.
 
 *TAC3 and the square grid linkage — Copyright (C) 2026 MEARVK LLC.
 Author: Maximilian Eric Alexander Rupplin von Keffikon (Max Rupplin).*
+
+
+---
+
+## 11. Disk-usage assessment — 1 GB of images at 10× (best methods)
+
+**Headline:** on a fresh TAC3 mount at the default multitude of **10×**,
+**1 GB of images occupies ≈ 10.003 GB**. The 10× redundancy is the entire
+story; TAC3's own bookkeeping (all three tables plus the grid, across all ten
+layers) adds **under 3 MB total** — an overhead of roughly **0.03 %** on top of
+the tenfold payload.
+
+### 11.1 The two components of TAC3 disk usage
+
+TAC3 storage is `payload × multitude` (the replicated file data) plus a small,
+mostly **fixed** metadata term. Using the "best methods" already in the design —
+an *implicit* zero-byte grid, fixed inline link records, one logical Table-1
+entry per file shared across layers — the metadata term stays tiny and, apart
+from a per-file entry, does **not** grow with data volume.
+
+**(a) Replicated payload — the dominant term.**
+By definition of N-way redundancy, 10× keeps ten copies:
+
+```text
+payload_on_disk = image_bytes × multitude = 1 GiB × 10 = 10 GiB
+```
+
+**(b) Metadata — small and mostly fixed.**
+Measured structure sizes (from the portable engine, `-std=c++17`):
+
+| Structure | Size | Scope |
+|-----------|------|-------|
+| `Tac3RegionWear` | 56 B | per region (4096 per layer) |
+| Wear table `region[]` | 4096 × 56 B = **224 KiB** | per layer |
+| `Tac3CellLinks` (grid) | 18 B | per region |
+| Grid table | 4096 × 18 B = **72 KiB** | per layer |
+| `Tac3AdminState` (Table 3) | 336 B | once per mount |
+| `Tac3FileEntry` (Table 1) | 40 B | once per **logical file** (shared across layers) |
+
+So the **fixed** per-mount metadata is:
+
+```text
+per-layer metadata = 224 KiB (wear) + 72 KiB (grid) = 296 KiB
+fixed metadata     = 296 KiB × 10 layers + 336 B (admin) ≈ 2.89 MiB
+```
+
+The only data-dependent metadata is Table 1 at **40 B per logical file** — and
+crucially **not** per replica, because one `Tac3FileEntry` records the
+`layer_mask` / `present[]` for all ten copies. A file of any size costs one
+40 B entry.
+
+### 11.2 The number, across image profiles
+
+"1 GB of images" can be a few big photos or many small icons. The file count
+changes Table 1 slightly; it does not change the outcome:
+
+| Image profile | # files | Table 1 | Total metadata | **Grand total** | Overhead vs 1 GB |
+|---------------|--------:|--------:|---------------:|----------------:|-----------------:|
+| Large photos (~4 MB) | 256 | 0.01 MB | 2.90 MB | **10.0028 GB** | +900.3 % |
+| Typical photos (~2 MB) | 512 | 0.02 MB | 2.91 MB | **10.0028 GB** | +900.3 % |
+| Web/app images (~500 KB) | 2,097 | 0.08 MB | 2.97 MB | **10.0029 GB** | +900.4 % |
+| Thumbnails/icons (~50 KB) | 20,971 | 0.80 MB | 3.69 MB | **10.0036 GB** | +900.4 % |
+
+(The "+900 %" is simply the nine extra copies; 10× data is +900 % over 1×. The
+metadata contributes the trailing ~0.03 %.)
+
+### 11.3 Reading the result
+
+- **Rule of thumb:** `TAC3 size ≈ multitude × data`. At 10×, budget **~10 GB of
+  disk per 1 GB of images**, plus a flat ~3 MB per mount.
+- **Metadata is negligible and near-constant.** Whether you store 256 files or
+  ~21,000, the tables add under 4 MB — the implicit grid stores **zero** bytes
+  of topology and each link record is a fixed 18 B, so there is no per-file or
+  per-link allocation blow-up.
+- **You pay for firmness, not for bookkeeping.** The cost of TAC3 is the
+  deliberate redundancy that makes an assailable medium firm; the wear/health
+  accounting and the neighbor-linkage grid are essentially free by comparison.
+- **Tuning the multitude scales linearly.** The same 1 GB of images is ≈ 1 GB at
+  1×, ≈ 3 GB at 3×, ≈ 5 GB at 5×, and ≈ 10 GB at 10× — choose the multitude for
+  the durability you want; disk cost tracks it directly.
+
+> **Assumptions.** 1 GB is taken as 1 GiB; sizes are the measured portable-engine
+> structure sizes and do not include the underlying block device's own
+> filesystem/allocation granularity (block rounding on very small files would
+> add a little, independent of TAC3). Compression is not assumed; images are
+> typically already compressed, so the 10× replication applies to the compressed
+> bytes.
