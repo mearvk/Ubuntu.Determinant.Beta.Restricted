@@ -1,6 +1,6 @@
 # TAC3 On-Disk Format
 
-This document defines TAC3's initial persistent on-disk contract. TAC3 is its own filesystem; it does not require ext4, ext5, or another filesystem underneath its logical format.
+This document defines TAC3's initial persistent on-disk contract and the first kernel consumer of that contract. TAC3 is its own filesystem; it does not require ext4, ext5, or another filesystem underneath its logical format.
 
 ## Initial format
 
@@ -48,6 +48,59 @@ The persistent superblock contains:
 
 The checksum is calculated with the checksum field zeroed. The formatter reads the superblock back after writing it and verifies both content and checksum.
 
+The kernel now consumes the same field offsets through `file-systems/tac3/tac3_format.h`.
+
+## Kernel persistent mount — Phase 1
+
+The authoritative `CONFIG_TAC3` build target now uses `tac3_persistent.c`.
+
+The persistent mount path is:
+
+```text
+mount -t tac3 DEVICE MOUNTPOINT
+        |
+        v
+get_tree_bdev()
+        |
+        v
+read TAC3 block 0
+        |
+        v
+validate magic/version/block size/checksum
+        |
+        v
+validate total size and table extents
+        |
+        v
+load UUID/generation/multitude/device class/state
+        |
+        v
+construct TAC3 runtime state
+        |
+        v
+read-only TAC3 mount
+```
+
+This is deliberately **fail closed**. A non-TAC3 device, unsupported format version, invalid checksum, invalid extent, invalid multitude, invalid device class, or inconsistent device size is rejected rather than interpreted as TAC3.
+
+### Why Phase 1 is read-only
+
+The previous TAC3 implementation keeps file payloads in the page cache. That behavior is not sufficient to claim durable file-data persistence on a block device. Therefore the new persistent mount layer explicitly forces the mounted filesystem read-only and returns `-EROFS` from the file write path.
+
+This prevents a false durability guarantee.
+
+Phase 1 therefore establishes:
+
+- persistent TAC3 format recognition;
+- persistent superblock verification;
+- persistent filesystem identity;
+- persistent generation/state/configuration discovery;
+- persistent table extent discovery;
+- persistent recovery extent discovery; and
+- a safe read-only kernel mount.
+
+It does **not** yet claim durable FILE payload writes or complete persistent directory/inode reconstruction.
+
 ## Tables
 
 **FILE** stores persistent file/object records and placement information.
@@ -66,28 +119,41 @@ Recovery metadata is separately addressable and is intended to contain known-goo
 
 Recovery updates must be transactional. An incomplete recovery record must never be treated as confirmed known-good state.
 
+The Phase 1 kernel mount reads the recovery extent location and persistent state from the superblock but does not yet modify recovery metadata. That write path belongs to the transactional persistence phase.
+
 ## `mkfs.tac3`
 
-The formatter is being introduced as:
+The formatter is:
 
 ```text
 mkfs.tac3 [--multitude N] [--device-class N] [--force] [--dry-run] DEVICE
 ```
 
-It must refuse mounted targets. Formatting requires explicit `--force`; `--force` does not bypass structural validation. Dry-run performs no writes.
+It refuses mounted targets. Formatting requires explicit `--force`; `--force` does not bypass structural validation. Dry-run performs no writes.
 
-The first formatter writes and verifies the TAC3 superblock and establishes the initial table/recovery extents. It does not fall back to an ext-family formatter.
+The formatter writes and verifies the TAC3 superblock and establishes the initial table/recovery extents. It does not fall back to an ext-family formatter.
 
 ## No ext5 dependency
 
 There is no `ext5` requirement. A standard filesystem may remain the base OS filesystem, while TAC3 occupies its own administrator-selected partition. The two are independent filesystem roles.
 
-## Next compatibility requirement
+## Next persistence phase
 
-The kernel TAC3 implementation and `mkfs.tac3` must ultimately consume the same authoritative format definitions. The shared `tac3_format.hpp` is the first userspace definition; kernel-side shared constants and persistent mount/read support should be added before declaring the on-disk format production-ready.
+The next kernel persistence phase is the durable FILE layer:
+
+1. define the persistent FILE record encoding;
+2. define persistent directory/name records;
+3. reconstruct the root and inode namespace from the FILE table;
+4. map file data into the declared data region;
+5. implement transactional allocation and writeback;
+6. persist HEALTH state;
+7. persist ADMIN state; and
+8. implement transactional recovery-generation updates.
+
+Only after those phases are implemented should TAC3 be advertised as a fully read/write persistent filesystem.
 
 ## Governing principle
 
-> TAC3 owns its own format, tables, recovery state, and integrity contract. The standard filesystem may coexist with TAC3, but it does not define TAC3.
+> TAC3 owns its own format, tables, recovery state, and integrity contract. The standard filesystem may coexist with TAC3, but it does not define TAC3. TAC3 must never claim durable behavior that its current on-disk implementation does not actually provide.
 
 Copyright (C) 2026 MEARVK LLC
