@@ -26,6 +26,25 @@ TAC3 does not manufacture uniqueness merely by changing a filename.
 
 See `TAC3_CONTEXTUAL_IDENTITY.md` for the normative reference and field-by-field list.
 
+## Boot partition and recovery
+
+TAC3 now has a documented **boot-capable recovery option**. The initial architecture
+retains a small firmware-compatible EFI System Partition for the firmware-facing
+handoff, while TAC3 provides the protected boot and recovery environment behind it.
+
+See `TAC3_BOOT_RECOVERY.md` for the boot/recovery contract, failure handling,
+rollback requirements, and startup integrity policy.
+
+The startup design includes a **system integrity and health scan** before normal
+operation is authorized. The scan is diagnostic first and read-only-first: it checks
+the boot environment, TAC3 availability, recovery manifest/state, base filesystem
+discoverability and health, and rollback availability. A failed recovery attempt
+must remain visibly failed and must not destroy the last known-good recovery state.
+
+`tac3_boot.hpp` / `tac3_boot.cpp` provide the initial startup integrity state model
+and conservative evaluation function. These are operational controls around the
+existing 33-stat model, not additional identity statistics.
+
 ## Commands
 
 ```text
@@ -63,3 +82,5 @@ tools/tac3/install.sh        # or: make -C tools/tac3 install   (PREFIX=/usr/loc
 - **Tools chain:** wired into `tools/Makefile` (`all`/`install`/`clean`).
 - **Context layer:** `tac3_context.cpp` is compiled into `tac3ctl` by the local
   `tools/tac3/Makefile` and provides the 33-stat comparison/signature primitives.
+- **Startup integrity:** `tac3_boot.cpp` is compiled into `tac3ctl` and provides
+  the conservative boot-integrity state evaluator.
