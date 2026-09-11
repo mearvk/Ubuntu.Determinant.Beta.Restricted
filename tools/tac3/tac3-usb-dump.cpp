@@ -9,6 +9,7 @@
 //
 // Copyright (C) 2026 MEARVK LLC
 
+#include "tac3.hpp"
 #include "tac3_format.hpp"
 #include <cerrno>
 #include <cstdint>
