@@ -22,6 +22,42 @@ The recommended installation sequence is:
 The base operating system therefore has a chance to establish a known-good working
 state before TAC3 is introduced.
 
+## Installer integration
+
+The repository now provides `tools/tac3/tac3-partition-installer.sh` as the explicit
+partition adapter for the regular installation path.
+
+Its default behavior is **read-only planning**. It requires all of the following
+before it will make changes:
+
+- explicit `--disk` whole-disk selection;
+- explicit `--size` selection;
+- `--execute` authorization;
+- root privileges;
+- no mounted child partitions on the target disk;
+- `parted` and `lsblk` availability;
+- a single sufficiently large unallocated extent;
+- `mkfs.tac3` availability.
+
+The adapter only creates a partition inside an existing unallocated extent. It does
+not resize, move, or reformat an existing base/EFI partition. It never substitutes a
+different filesystem when `mkfs.tac3` is unavailable.
+
+Example planning operation:
+
+```sh
+tools/tac3/tac3-partition-installer.sh --disk /dev/sda --size 20G
+```
+
+The same operation becomes a write operation only with explicit authorization:
+
+```sh
+sudo tools/tac3/tac3-partition-installer.sh --disk /dev/sda --size 20G --execute
+```
+
+The partition adapter is also registered in `installer/install-manifest.txt`, so the
+normal package-installation path can expose it as `tac3-partition-installer.sh`.
+
 ## Partition sizing
 
 TAC3 should accept an administrator-selected partition size rather than requiring a
