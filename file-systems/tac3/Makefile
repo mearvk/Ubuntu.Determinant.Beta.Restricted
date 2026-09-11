@@ -4,8 +4,10 @@
 # lives in the kernel tree at kernels/linux-5.15.204/linux-5.15.204/fs/tac3/.
 
 # --- Kernel module (kbuild) ------------------------------------------------
-# Builds the mountable TAC3 filesystem from tac3.c under kbuild.
-obj-$(CONFIG_TAC3)	+= tac3.o
+# The persistent implementation is now the build target for CONFIG_TAC3.
+# The former tac3.c implementation remains in-tree as the earlier memory-backed
+# reference while durable FILE payload support is completed.
+obj-$(CONFIG_TAC3) += tac3_persistent.o
 
 # --- Userspace C++ port (portable engine) ---------------------------------
 # tac3.cpp/tac3.hpp are a standalone C++ equivalent of the wear/pressure/health
