@@ -1,20 +1,22 @@
 # SPDX-License-Identifier: GPL-2.0
 #
 # tools/tac3 — userspace TAC3 diagnostic (tac3ctl), built from the portable
-# C++ engine (tac3.cpp/tac3.hpp). Companion to the in-kernel fs/tac3 module.
+# C++ engine plus the 33-stat contextual identity layer. Companion to the
+# in-kernel fs/tac3 module.
 
 CXX      ?= c++
 CXXFLAGS ?= -std=c++17 -Wall -Wextra -O2 -I.
 PREFIX   ?= /usr/local/bin
 
 TARGET := tac3ctl
-SRCS   := tac3ctl.cpp tac3.cpp
+SRCS   := tac3ctl.cpp tac3.cpp tac3_context.cpp
+HDRS   := tac3.hpp tac3_context.hpp
 
 .PHONY: all install uninstall clean
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS) tac3.hpp
+$(TARGET): $(SRCS) $(HDRS)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SRCS)
 
 install: all
