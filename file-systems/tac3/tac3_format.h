@@ -34,5 +34,6 @@
 #define TAC3_SB_OFF_STATE                 128u
 #define TAC3_SB_OFF_CHECKSUM_ALGORITHM    132u
 #define TAC3_SB_OFF_CHECKSUM              (TAC3_DISK_BLOCK_SIZE - 4u)
+#define TAC3_DISK_OFF_CHECKSUM            TAC3_SB_OFF_CHECKSUM
 
 #endif
