@@ -8,6 +8,7 @@ gcc-helper|tools/gcc|download-gcc.sh|1
 gcc-helper|tools/gcc|extract-gcc.sh|1
 tac3ctl|tools/tac3|tac3ctl|1
 tac3healthctl|tools/tac3health|tac3healthctl|1
+tac3-partition-installer|tools/tac3|tac3-partition-installer.sh|1
 # ctrmsctl.service is installed by the ctrmsctl component on systemd hosts.
 # XMC ASYSMA support is installed with the xmc component.
 # tac3ctl is the userspace diagnostic for the in-kernel TAC3 filesystem
@@ -17,3 +18,6 @@ tac3healthctl|tools/tac3health|tac3healthctl|1
 # reads /proc/tac3/{status,health,admin} and watches for health, errors, and
 # alterations. Build it with tools/tac3health/build.sh. Its optional systemd
 # unit (tac3health.service) is installed via 'make -C tools/tac3health install-service'.
+# tac3-partition-installer is a safety-gated partition adapter. It defaults to
+# read-only planning and requires --execute, root, an unmounted target disk,
+# unallocated space, and mkfs.tac3 before it will write anything.
