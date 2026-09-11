@@ -5,6 +5,27 @@
 portable C++ engine (`tac3.cpp` / `tac3.hpp`, the same port kept in
 `file-systems/tac3/`) so it runs with or without the kernel module loaded.
 
+## 33-stat contextual file model
+
+TAC3 now includes `tac3_context.hpp` / `tac3_context.cpp`, the medium-granularity
+contextual identity layer defined by `TAC3_CONTEXTUAL_IDENTITY.md`.
+
+Every contextual file record carries **33 vital statistics** covering identity,
+context, provenance, filesystem/storage state, activity, pressure, wear, health,
+integrity, administration, security, relationships, and operational state.
+
+The model deliberately permits files to have the **same name**, the **same primary
+ID**, and the **same context area**. Those attributes are not individually treated
+as globally unique. `same_vital_state()` compares the complete 33-stat state, while
+`contextual_signature()` provides a derived 64-bit diagnostic/indexing signature.
+The signature is derived from the 33 statistics and is **not a 34th statistic**.
+
+If two records are identical across the complete applicable state but must still be
+preserved as distinct objects, an explicit relationship/instance mechanism is needed;
+TAC3 does not manufacture uniqueness merely by changing a filename.
+
+See `TAC3_CONTEXTUAL_IDENTITY.md` for the normative reference and field-by-field list.
+
 ## Commands
 
 ```text
@@ -40,3 +61,5 @@ tools/tac3/install.sh        # or: make -C tools/tac3 install   (PREFIX=/usr/loc
   `package-installer` binary installs it into `/user/bin` and `/deck/bin`
   without any recompile of the installer.
 - **Tools chain:** wired into `tools/Makefile` (`all`/`install`/`clean`).
+- **Context layer:** `tac3_context.cpp` is compiled into `tac3ctl` by the local
+  `tools/tac3/Makefile` and provides the 33-stat comparison/signature primitives.
