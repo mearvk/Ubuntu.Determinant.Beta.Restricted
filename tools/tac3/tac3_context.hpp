@@ -6,14 +6,30 @@
 // signature is available for comparison/indexing, but is not a 34th statistic.
 // Same names, IDs, and context areas are explicitly permitted.
 //
+// Authority notation is consumed from the established SUDO 1-8 and
+// USER/GROUP/OWNER/TRUSTED/GENIUS series. TAC3 does not substitute its own
+// naming scheme when those established names are supplied.
+//
 // Copyright (C) 2026 MEARVK LLC
 
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <string>
 
 namespace tac3 {
+
+// Established authority/reference series. These are names/slots TAC3 may use;
+// TAC3 does not reinterpret them into a proprietary naming convention.
+struct Tac3AuthoritySeries {
+    std::array<std::string, 8> sudo{}; // SUDO 1 through SUDO 8
+    std::string user;                  // USER
+    std::string group;                 // GROUP
+    std::string owner;                 // OWNER
+    std::string trusted;               // TRUSTED
+    std::string genius;                // GENIUS
+};
 
 struct Tac3VitalStats {
     //  1-8: identity and context
@@ -37,7 +53,7 @@ struct Tac3VitalStats {
     // 15-20: filesystem and storage
     std::string device_class;              // 15
     std::string filesystem_type;           // 16
-    std::string mount_point;              // 17
+    std::string mount_point;               // 17
     std::uint64_t capacity = 0;            // 18
     std::uint64_t allocated_space = 0;     // 19
     std::uint64_t available_space = 0;     // 20
@@ -58,10 +74,14 @@ struct Tac3VitalStats {
     std::string security_trust_status;     // 31
     std::string relationship_context;      // 32
     std::string operational_state;         // 33
+
+    // Established authority series. Kept separate from the 33 statistics so
+    // authority notation does not silently become a new identity statistic.
+    Tac3AuthoritySeries authority{};
 };
 
-// Compares the complete 33-stat state. This is intentionally stronger than
-// comparing filename or File ID alone.
+// Compares the complete 33-stat state. Authority series is administrative
+// metadata and is not part of the 33-stat identity comparison.
 bool same_vital_state(const Tac3VitalStats& a,
                       const Tac3VitalStats& b) noexcept;
 
