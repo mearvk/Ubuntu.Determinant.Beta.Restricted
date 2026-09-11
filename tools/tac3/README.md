@@ -26,9 +26,22 @@ TAC3 does not manufacture uniqueness merely by changing a filename.
 
 See `TAC3_CONTEXTUAL_IDENTITY.md` for the normative reference and field-by-field list.
 
+## Regular installation profile
+
+TAC3 is an **optional, regularly installable system component**. The recommended
+installation order is to install and successfully boot the standard/base operating
+system first, verify that it works, then allocate an administrator-selected amount
+of storage for a TAC3 partition.
+
+See `TAC3_INSTALLATION_PROFILE.md` for the installation sequence, partition-sizing
+rules, safety contract, validation steps, and removal rules.
+
+The TAC3 partition size is a deployment parameter, not an identity statistic. The
+installer must not silently destroy a known-good base system when creating TAC3.
+
 ## Boot partition and recovery
 
-TAC3 now has a documented **boot-capable recovery option**. The initial architecture
+TAC3 also has a documented **boot-capable recovery option**. The initial architecture
 retains a small firmware-compatible EFI System Partition for the firmware-facing
 handoff, while TAC3 provides the protected boot and recovery environment behind it.
 
