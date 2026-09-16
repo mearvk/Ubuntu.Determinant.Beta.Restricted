@@ -4,12 +4,19 @@ CFLAGS ?= -Wall -Wextra -O2 -std=c11
 PREFIX ?= /usr/local
 LIBEXECDIR ?= $(PREFIX)/lib/cmd
 BINDIR ?= $(PREFIX)/bin
+APPLICATIONSDIR ?= $(PREFIX)/share/applications
+ICONDIR ?= $(PREFIX)/share/icons/hicolor/24x24/apps
+DESKTOP_DIR ?= $(HOME)/Desktop
+DESKTOP_FILE = CMD.desktop
+DESKTOP_TEMPLATE = desktop/linux/cmd.desktop
+DESKTOP_INSTALLED = $(APPLICATIONSDIR)/cmd.desktop
+DESKTOP_ICON = $(ICONDIR)/cmd.bmp
 
 COMMON = format/cmd-format.h format/cmd-validate.h
 TOOLS = cmdlink cmdlink-original cmd-icon-gen cmd-inspect
 LINUX_LAUNCHER = launcher/linux/cmd-launch-linux
 
-.PHONY: all clean test verify-sha native-launcher install windows-launcher macos-launcher
+.PHONY: all clean test verify-sha native-launcher install install-desktop windows-launcher macos-launcher
 
 all: native-launcher $(TOOLS)
 
@@ -58,13 +65,30 @@ clean:
 	rm -f $(TOOLS) $(LINUX_LAUNCHER)
 	rm -f test-icon.bmp
 
-install: all
+# Install the generated CMD icon, a system desktop entry, and (for a normal
+# user installation) a clickable CMD shortcut on the user's Desktop.
+install: all install-desktop
 	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBEXECDIR)
 	install -m 755 cmdlink $(DESTDIR)$(BINDIR)/cmdlink
 	install -m 755 cmd-icon-gen $(DESTDIR)$(BINDIR)/cmd-icon-gen
 	install -m 755 cmd-inspect $(DESTDIR)$(BINDIR)/cmd-inspect
 	install -m 755 $(LINUX_LAUNCHER) $(DESTDIR)$(LIBEXECDIR)/cmd-launch-linux
-	@echo "Installed CMD tools and native Linux launcher template."
+	@echo "Installed CMD tools, native Linux launcher, icon, and desktop integration."
+
+install-desktop: cmd-icon-gen
+	@set -eu; \
+	install -d "$(DESTDIR)$(ICONDIR)" "$(DESTDIR)$(APPLICATIONSDIR)"; \
+	./cmd-icon-gen -o "$(DESTDIR)$(DESKTOP_ICON)"; \
+	sed -e 's|%CMDLINK%|$(BINDIR)/cmdlink|g' -e 's|%CMD_ICON%|$(DESKTOP_ICON)|g' \
+		"$(DESKTOP_TEMPLATE)" > "$(DESTDIR)$(DESKTOP_INSTALLED)"; \
+	chmod 755 "$(DESTDIR)$(DESKTOP_INSTALLED)"; \
+	if [ -n "$(DESKTOP_DIR)" ]; then \
+		install -d "$(DESKTOP_DIR)"; \
+		sed -e 's|%CMDLINK%|$(BINDIR)/cmdlink|g' -e 's|%CMD_ICON%|$(DESKTOP_ICON)|g' \
+			"$(DESKTOP_TEMPLATE)" > "$(DESKTOP_DIR)/$(DESKTOP_FILE)"; \
+		chmod 755 "$(DESKTOP_DIR)/$(DESKTOP_FILE)"; \
+		echo "Installed CMD desktop icon shortcut: $(DESKTOP_DIR)/$(DESKTOP_FILE)"; \
+	fi
 
 windows-launcher:
 	$(MAKE) -C launcher/windows
