@@ -1,11 +1,11 @@
 [Desktop Entry]
 Type=Application
-Name=CMD
-Comment=Native CMD application launcher
-Exec=%CMD_LAUNCHER% %f
-TryExec=%CMD_LAUNCHER%
+Name=CMD Package
+Comment=Native CMD toolchain and .cmd application support
+Exec=%CMDLINK% --help
+TryExec=%CMDLINK%
 Icon=%CMD_ICON%
-Terminal=false
+Terminal=true
 Categories=Development;Utility;
 MimeType=application/x-cmd;
 NoDisplay=false
