@@ -19,7 +19,7 @@ static const uint32_t K[64] = {
 0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
 0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
 0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
-0xa2bfe8a1,0xa81a664b,0xbf597fc7,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
 0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
 0x748f82ee,0x78a5636f,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2};
 #define R(x,n) ((x>>n)|(x<<(32-n)))
@@ -35,7 +35,6 @@ static void shupd(sha256_ctx*c,const uint8_t*p,size_t n){c->bits+=(uint64_t)n*8;
 static void shfin(sha256_ctx*c,uint8_t o[32]){size_t i=c->n;c->b[i++]=0x80;while(i!=56){if(i==64){shblk(c,c->b);i=0;}c->b[i++]=0;}for(int j=0;j<8;j++)c->b[63-j]=(uint8_t)(c->bits>>(j*8));shblk(c,c->b);for(i=0;i<8;i++){o[4*i]=(uint8_t)(c->h[i]>>24);o[4*i+1]=(uint8_t)(c->h[i]>>16);o[4*i+2]=(uint8_t)(c->h[i]>>8);o[4*i+3]=(uint8_t)c->h[i];}}
 static uint8_t* readfile(const char*p,size_t*n){FILE*f=fopen(p,"rb");if(!f)return NULL;if(fseek(f,0,SEEK_END)||ftell(f)<0){fclose(f);return NULL;}long z=ftell(f);rewind(f);uint8_t*b=malloc((size_t)z);if(!b){fclose(f);return NULL;}if(fread(b,1,(size_t)z,f)!=(size_t)z){free(b);fclose(f);return NULL;}fclose(f);*n=(size_t)z;return b;}
 static int append(FILE*f,const void*p,size_t n){return n && fwrite(p,1,n,f)!=n;}
-static const char*base(const char*p){const char*s=strrchr(p,'/');return s?s+1:p;}
 static char*jsonq(const char*s){size_t n=2;for(const char*p=s?s:"";*p;p++)n+=(*p=='"'||*p=='\\')?2:1;char*r=malloc(n+1),*q=r;if(!r)return NULL;*q++='"';for(const char*p=s?s:"";*p;p++){if(*p=='"'||*p=='\\')*q++='\\';*q++=*p;}*q++='"';*q=0;return r;}
 static void usage(const char*p){fprintf(stderr,"Usage: %s input.class|input.jar -o output.cmd [--main=Class] [--launcher=file] [--icon=file]\n",p);}
 int main(int ac,char**av){const char*in=NULL,*out=NULL,*mainc=NULL,*launcher=NULL,*icon=NULL;int jar=0,headless=0,pin=1,neg=0,grain=0,graal=0;for(int i=1;i<ac;i++){const char*a=av[i];if(!strcmp(a,"--headless"))headless=1;else if(!strcmp(a,"--no-pin"))pin=0;else if(!strcmp(a,"--negamane"))neg=1;else if(!strcmp(a,"--graal-hint"))graal=1;else if(!strncmp(a,"--grain=",8))grain=atoi(a+8);else if(!strncmp(a,"--main=",7))mainc=a+7;else if(!strncmp(a,"--launcher=",11))launcher=a+11;else if(!strncmp(a,"--icon=",7))icon=a+7;else if(!strcmp(a,"-o")&&i+1<ac)out=av[++i];else if(a[0]!='-'){in=a;size_t n=strlen(a);jar=n>4&&!strcmp(a+n-4,".jar");}else {usage(av[0]);return 2;}}
