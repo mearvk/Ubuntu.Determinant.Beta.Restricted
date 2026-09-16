@@ -35,15 +35,12 @@ cmd-icon-gen: cmd-icon-gen.c
 
 verify-sha: cmdlink
 	@set -eu; \
-	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
-	printf 'abc' > "$$tmp/payload.class"; \
-	printf '\xca\xfe\xba\xbe' >> "$$tmp/payload.class"; \
-	printf '%s\n' 'SHA-256 implementation self-test uses the repository-standard SHA-256 constants.'; \
-	printf '%s\n' 'Expected SHA-256(abc): ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'; \
-	sha256sum "$$tmp/payload.class" | cut -d' ' -f1
+	printf '%s\n' 'SHA-256 standard test vector:'; \
+	printf abc | sha256sum | grep -q '^ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  -$$'; \
+	echo 'SHA-256 self-test passed.'
 
 # Native ELF smoke test plus integrity-failure test. No shell-script fallback is accepted.
-test: all
+test: all verify-sha
 	@set -eu; \
 	tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
 	printf '%s\n' 'public class HelloCmd { public static void main(String[] a) { System.out.println("Hello from native CMD"); } }' > "$$tmp/HelloCmd.java"; \
@@ -53,7 +50,9 @@ test: all
 	./cmd-inspect --verify --manifest "$$tmp/HelloCmd.cmd"; \
 	"$$tmp/HelloCmd.cmd"; \
 	cp "$$tmp/HelloCmd.cmd" "$$tmp/tampered.cmd"; \
-	printf X | dd of="$$tmp/tampered.cmd" bs=1 seek=120 conv=notrunc status=none; \
+	python3 - "$$tmp/tampered.cmd" <<'PY'; \
+import struct,sys; p=sys.argv[1]; b=bytearray(open(p,'rb').read()); magic=struct.pack('<I',0x434D4428); h=b.find(magic); assert h>=0; class_off=struct.unpack_from('<I',b,h+0x18)[0]; class_size=struct.unpack_from('<I',b,h+0x1c)[0]; assert class_size>0; b[h+class_off+class_size//2]^=1; open(p,'wb').write(b)
+PY
 	if "$$tmp/tampered.cmd" >/dev/null 2>&1; then echo 'ERROR: tampered CMD executed' >&2; exit 1; fi; \
 	if ./cmd-inspect --verify "$$tmp/tampered.cmd" >/dev/null 2>&1; then echo 'ERROR: tampered CMD verified' >&2; exit 1; fi; \
 	echo 'CMD native and integrity-failure tests passed.'
