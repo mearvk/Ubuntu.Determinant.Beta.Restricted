@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <mach-o/dyld.h>
 #include "../../format/cmd-format.h"
 #include "../../format/cmd-validate.h"
 
