@@ -7,192 +7,156 @@
 
 ## Overview
 
-The `.cmd` (Command Executable) file format sits between Java `.class` bytecode and native
-platform executables. It is the **integration layer** — a clever runnable that allows Java
-applications to behave as first-class desktop citizens: launchable, pinnable, icon-bearing,
-and directly executable without manual `java -cp` invocations.
+`.cmd` is a native executable container for Java class/JAR payloads. The current Linux implementation uses a real ELF launcher prefix, followed by a fixed 96-byte CMD header and embedded application sections. The native launcher reads the executable itself, validates the container, verifies the embedded payload SHA-256, discovers a compatible Java runtime, extracts the payload to a private temporary directory, and only then launches Java.
 
-A `.cmd` file encapsulates:
-- Java bytecode (embedded or referenced `.class`/`.jar`)
-- Native launcher stub (platform-specific ELF/PE/Mach-O prologue)
-- Desktop icon (24x24 BMP, embedded)
-- JVM launch parameters (heap, module path, system properties)
-- Security metadata (grain-claim, permission class, NEGAMANE brand)
-- GraalVM Native Image hint (optional AOT compilation directive)
-
-## Position in the Pipeline
-
-```
-.java → javac → .class → xmc → .xclass (metadata)
-                    ↓
-                  cmdlink → .cmd (desktop-ready executable)
-                    ↓
-              native execution via embedded launcher stub
-```
-
-The `.cmd` format bridges the gap that exists between:
-- `.class` — portable but not directly runnable on the desktop
-- Native ELF — directly runnable but loses Java's portability and tooling
-
-A `.cmd` file IS a native executable (the first bytes are a valid ELF/PE header) that
-contains embedded Java class data and a JVM bootstrap stub. The OS can execute it directly.
-The desktop environment can display its embedded icon. The JDesk file manager recognizes
-it as a pinnable application.
+The historical `tools/cmd/cmdlink.c` is intentionally retained. It is built as `cmdlink-original` for compatibility/reference purposes. The native toolchain uses `linker/cmdlink-native.c` as the authoritative linker.
 
 ## File Structure
 
-```
-┌─────────────────────────────────────────┐
-│ ELF Header (native stub)                │  ← OS executes this
-├─────────────────────────────────────────┤
-│ CMD Header (magic + metadata)           │  ← cmdlink identity
-├─────────────────────────────────────────┤
-│ Icon Section (24x24 BMP)                │  ← Desktop icon
-├─────────────────────────────────────────┤
-│ Manifest Section                        │  ← JVM params, classpath
-├─────────────────────────────────────────┤
-│ Class Data Section                      │  ← Embedded .class/.jar
-├─────────────────────────────────────────┤
-│ Security Section                        │  ← Grain, permission, brand
-├─────────────────────────────────────────┤
-│ Native Image Hint (optional)            │  ← GraalVM AOT directive
-└─────────────────────────────────────────┘
+```text
+native launcher prefix
+CMD header (96 bytes)
+icon section
+manifest section
+embedded class/JAR
+security section
+optional native-image metadata
 ```
 
-## CMD Header
+The CMD header contains magic, version, flags, section offsets/sizes, SHA-256, minimum JDK version, native-image hint information, and reserved space. Section offsets are relative to the CMD header rather than the beginning of the native prefix.
 
-| Offset | Size | Field | Description |
-|--------|------|-------|-------------|
-| 0x00 | 4 | magic | `0x434D4428` ("CMD(") |
-| 0x04 | 2 | version | Format version (0x0100) |
-| 0x06 | 2 | flags | Bit flags (see below) |
-| 0x08 | 4 | icon_offset | Offset to embedded icon |
-| 0x0C | 4 | icon_size | Size of icon data |
-| 0x10 | 4 | manifest_offset | Offset to manifest |
-| 0x14 | 4 | manifest_size | Size of manifest |
-| 0x18 | 4 | class_offset | Offset to class/JAR data |
-| 0x1C | 4 | class_size | Size of class data |
-| 0x20 | 4 | security_offset | Offset to security section |
-| 0x24 | 4 | security_size | Size of security section |
-| 0x28 | 32 | sha256 | SHA-256 of class data |
-| 0x48 | 4 | jdk_min_version | Minimum JDK (28 = 0x1C) |
-| 0x4C | 4 | native_hint_offset | GraalVM native-image hint |
-| 0x50 | 4 | native_hint_size | Size of hint section |
-| 0x54 | 12 | reserved | Zero-filled |
+## Header
 
-**Total header: 96 bytes (0x60)**
+| Offset | Size | Field |
+|---|---:|---|
+| 0x00 | 4 | magic `0x434D4428` (`CMD(`) |
+| 0x04 | 2 | format version |
+| 0x06 | 2 | flags |
+| 0x08 | 4 | icon offset |
+| 0x0C | 4 | icon size |
+| 0x10 | 4 | manifest offset |
+| 0x14 | 4 | manifest size |
+| 0x18 | 4 | class/JAR offset |
+| 0x1C | 4 | class/JAR size |
+| 0x20 | 4 | security offset |
+| 0x24 | 4 | security size |
+| 0x28 | 32 | SHA-256 of class/JAR payload |
+| 0x48 | 4 | minimum JDK version |
+| 0x4C | 4 | native-image hint offset |
+| 0x50 | 4 | native-image hint size |
+| 0x54 | 12 | reserved |
 
-### Flags
-
-| Bit | Name | Meaning |
-|-----|------|---------|
-| 0 | CMD_EMBEDDED_JAR | Class data is a full JAR |
-| 1 | CMD_EMBEDDED_CLASS | Class data is raw .class |
-| 2 | CMD_EXTERNAL_REF | Class data is a path reference |
-| 3 | CMD_NATIVE_IMAGE | Already AOT-compiled (GraalVM) |
-| 4 | CMD_PINNABLE | May be pinned to desktop/taskbar |
-| 5 | CMD_HEADLESS | No GUI (console application) |
-| 6 | CMD_NEGAMANE | NEGAMANE branded (immutable) |
-| 7 | CMD_GRAIN_AWARE | Carries grain-claim metadata |
-
-## Icon Specification
-
-The `.cmd` icon is a **24x24 pixel BMP** with the following design:
-
-- **Outer ring (pixels 0-2 from edge):** Royal blue (#4169E1) — the authority frame
-- **Second ring (pixels 3-5):** Hazy pink, abstract/translucent (#FFB6C1 with alpha blend) — the soft intermediary
-- **Third ring (pixels 6-8):** Red (#DC143C) — the energy boundary
-- **Fourth ring (pixels 9-10):** White (#FFFFFF) — the native clarity ring
-- **Center (pixels 11-12):** Wholesome pink (#FFB7C5) — the warm heart
-- **Bottom-right quadrant:** A small 3D cube motif (the Java/JVM reference)
-- **Overall:** Clear, glossy appearance with a square footprint
-
-The icon is generated by `cmd-icon-gen` and embedded at link time.
-
-The square icon footprint means the `.cmd` executable presents as a clean square
-tile on the JDesk desktop, taskbar, and dock — holdable, pinnable, draggable.
-
-## Desktop Integration
-
-When a `.cmd` file is placed on the JDesk desktop:
-1. The desktop renders the embedded 24x24 BMP icon as a square tile
-2. The filename (sans extension) displays below the icon
-3. Double-click executes the native stub, which bootstraps the JVM
-4. Right-click → "Pin to Taskbar" adds it to the dock
-5. The `.cmd` extension is hidden by default (like .exe on Windows)
-
-The square icon "holds" the executable to the desktop — it is the visual anchor
-that represents the program's presence in the user's workspace.
+Total: **96 bytes**.
 
 ## Toolchain
 
-### cmdlink — The CMD Linker
+### Native linker
 
 ```bash
-cmdlink MyApp.class -o MyApp.cmd                    # Basic link
-cmdlink MyApp.jar --main=com.example.Main -o App.cmd  # JAR with main class
-cmdlink MyApp.class --icon=custom.bmp -o MyApp.cmd  # Custom icon
-cmdlink MyApp.class --graal-hint -o MyApp.cmd       # With native-image hint
-cmdlink MyApp.class --grain=3 --perm=trusted -o MyApp.cmd  # Security metadata
+make
+./cmdlink MyApp.class --main=MyApp -o MyApp.cmd
+./cmdlink MyApp.jar --main=com.example.Main -o App.cmd
 ```
 
-### cmd-icon-gen — Icon Generator
+The authoritative linker is `linker/cmdlink-native.c`. It uses a self-contained, standard SHA-256 implementation and embeds the resulting digest in both the header and security metadata.
+
+### Original linker
+
+The original `tools/cmd/cmdlink.c` remains in the repository and is compiled as:
 
 ```bash
-cmd-icon-gen -o myapp-icon.bmp                      # Default CMD icon
-cmd-icon-gen --accent=green -o myapp-icon.bmp       # Custom accent color
-cmd-icon-gen --cube-position=br -o myapp-icon.bmp   # Cube in bottom-right
+make cmdlink-original
 ```
 
-### cmd-inspect — CMD File Inspector
+It is retained rather than deleted so the historical implementation remains available for comparison and compatibility work.
+
+### Inspector
 
 ```bash
-cmd-inspect MyApp.cmd          # Show all sections
-cmd-inspect --icon MyApp.cmd   # Extract icon to stdout
-cmd-inspect --manifest MyApp.cmd  # Show manifest
-cmd-inspect --verify MyApp.cmd    # Verify SHA-256 integrity
+./cmd-inspect --verify MyApp.cmd
+./cmd-inspect --manifest MyApp.cmd
+./cmd-inspect --security MyApp.cmd
+./cmd-inspect --icon MyApp.cmd
 ```
 
-## Relationship to JDK 28
+The inspector performs structural section-bound checks before reading sections and independently recomputes the embedded payload SHA-256.
 
-JDK 28 brings:
-- **Value Objects (Project Valhalla)** — .cmd files can carry value-class metadata
-- **Simple JSON API** — manifest section uses JSON internally
-- **Generational Shenandoah** — .cmd manifest can specify GC preferences
-- **Strict Field Initialization** — security section validates class integrity
+## Integrity and Validation
 
-The `.cmd` format is designed for JDK 28+ runtimes. The minimum JDK version field
-in the header (0x1C = 28) ensures the host JVM supports all required features.
+`format/cmd-validate.h` centralizes range validation and payload-flag validation. It rejects integer-wrap conditions, out-of-file sections, malformed native-image ranges, unsupported header versions, and invalid payload flag combinations.
 
-## Relationship to xmc
+The Linux launcher verifies the embedded payload before execution. A modified class/JAR payload therefore fails before Java is started. The native smoke test also deliberately tampers with a generated `.cmd` and requires both execution and inspection verification to fail.
 
-The `.xclass` (from xmc) provides metadata about a class — its quality, security
-grade, and structural position. The `.cmd` format consumes this metadata:
+The SHA-256 implementation is tested against the standard `SHA-256("abc")` digest:
 
-```
-.java → javac → .class
-              → xmc → .xclass (metadata oracle)
-                        ↓
-              cmdlink ← .class + .xclass → .cmd (runnable desktop executable)
+```text
+ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 ```
 
-The `.cmd` carries the `.xclass` security grade in its Security Section,
-ensuring the desktop executable inherits the structural analysis from xmc.
+## Platform Launchers
 
-## Security
+```text
+launcher/linux/cmd-launch-linux.c
+launcher/windows/cmd-launch-windows.c
+launcher/macos/cmd-launch-macos.c
+```
 
-- **NEGAMANE brand**: If flag bit 6 is set, the .cmd file is immutable post-install
-- **Grain-claim**: Security section carries grain classification (1-4)
-- **Permission class**: Manifest specifies required permission (Untrusted/Trusted/Genius)
-- **SHA-256**: Class data integrity verified at every launch
-- **ELF Integrity Guardian**: Native stub is covered by system ELF verification
+Linux has the executable runtime template used by the current native smoke test. Windows and macOS now have native entry-point source and build targets; their packaging/runtime integration remains platform-specific and is not represented as complete until those native toolchains are exercised.
 
-## Build
+## Desktop Integration
+
+Platform-specific desktop contracts are separated from linking:
+
+```text
+desktop/linux/
+desktop/windows/
+desktop/macos/
+```
+
+This keeps file association, icon registration, signing, quarantine, and desktop-cache policy out of the core linker. The application payload itself remains self-contained.
+
+## Build and Test
 
 ```bash
-make              # Build cmdlink, cmd-icon-gen, cmd-inspect
-make test         # Smoke tests
-make install      # Install to /usr/local/bin/
+make
+make test
+make verify-sha
+make windows-launcher   # Windows host/toolchain
+make macos-launcher     # macOS host/toolchain
+make install
+```
+
+`make test` requires a working C compiler and `javac`. It builds a real ELF-prefixed `.cmd`, inspects it, executes it, modifies the payload, and confirms the modified executable is rejected.
+
+## Relationship to SecureJDK 28
+
+The format records a minimum JDK version of 28 and advertises SecureJDK 28 as the preferred runtime. The launcher still performs runtime discovery rather than assuming one fixed installation path.
+
+## Source Layout
+
+```text
+tools/cmd/
+├── README.md
+├── Makefile
+├── cmdlink.c                    # historical/original implementation
+├── cmd-icon-gen.c
+├── format/
+│   ├── cmd-format.h
+│   └── cmd-validate.h
+├── linker/
+│   ├── cmdlink.c                # existing native linker implementation
+│   └── cmdlink-native.c         # authoritative hardened linker
+├── inspect/
+│   └── cmd-inspect.c
+├── launcher/
+│   ├── linux/
+│   ├── windows/
+│   └── macos/
+├── desktop/
+│   ├── linux/
+│   ├── windows/
+│   └── macos/
+└── tests/                       # native/integrity regression tests
 ```
 
 ---
