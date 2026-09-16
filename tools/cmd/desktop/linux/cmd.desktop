@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=CMD
+Comment=Native CMD application launcher
+Exec=%CMD_LAUNCHER% %f
+TryExec=%CMD_LAUNCHER%
+Icon=%CMD_ICON%
+Terminal=false
+Categories=Development;Utility;
+MimeType=application/x-cmd;
+NoDisplay=false
+StartupNotify=true
