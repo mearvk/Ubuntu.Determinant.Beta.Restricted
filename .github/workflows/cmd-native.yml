@@ -1,0 +1,26 @@
+name: CMD Native CI
+
+on:
+  push:
+    paths:
+      - 'tools/cmd/**'
+      - '.github/workflows/cmd-native.yml'
+  pull_request:
+    paths:
+      - 'tools/cmd/**'
+      - '.github/workflows/cmd-native.yml'
+
+jobs:
+  linux-native-cmd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build and test CMD toolchain
+        working-directory: tools/cmd
+        run: make test
