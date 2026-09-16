@@ -19,7 +19,7 @@ public class HelloCmd {
 JAVA
 
 javac "$TMP/HelloCmd.java"
-./cmdlink "$TMP/HelloCmd.class" --main=HelloCmd --headless --no-pin --launcher="$ROOT/$LINUX_LAUNCHER" -o "$TMP/HelloCmd.cmd" 2>/dev/null
+./cmdlink "$TMP/HelloCmd.class" --main=HelloCmd --headless --no-pin --launcher="$ROOT/launcher/linux/cmd-launch-linux" -o "$TMP/HelloCmd.cmd" 2>/dev/null
 
 ./cmd-inspect --verify "$TMP/HelloCmd.cmd"
 OUTPUT=$("$TMP/HelloCmd.cmd")
