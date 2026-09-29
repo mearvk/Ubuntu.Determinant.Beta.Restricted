@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # limit
 
 `limit` is a read-only local binary inventory utility for Linux, Windows, and macOS.
