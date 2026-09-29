@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # `pmove` — Parallel Move
 
 `pmove` is the explicit move-mode command in the repository's parallel file-transfer tools.
