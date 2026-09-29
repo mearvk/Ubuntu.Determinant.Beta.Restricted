@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # Aptitude — Context-Aware Installer
 
 Aptitude is an experimental installation layer for Linux that turns a dropped software artifact into a **reviewable, verifiable installation plan**.
