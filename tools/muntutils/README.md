@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # muntutils
 
 `muntutils` is a native tool for the MEARVK Ubuntu.Determinant.Beta.Restricted tool set. It is written in both C and C++: a C11 core measures the filesystem, and a C++17 engine analyzes and trims source code. It has two capabilities exposed as subcommands.
