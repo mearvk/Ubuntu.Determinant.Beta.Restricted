@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # pcopy / pmove — Parallel Copy/Move
 
 Hardware-aware parallel file copy and move operations that exploit NVMe multi-queue architecture, PCIe lane bandwidth, and multi-core CPUs to copy many files simultaneously.
