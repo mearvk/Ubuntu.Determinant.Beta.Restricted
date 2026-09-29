@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # Desktop Wallpapers — Galactic Cherry Marvell Edition 98
 
 9 original SVG wallpapers designed for the Galactic Cherry Marvell Edition.
