@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # UTF-32 Alpha Package
 
 This directory contains a compact, implementation-oriented UTF-32 package for the repository. It is based on the Unicode Standard's UTF-32 definition and is intentionally written as an original conformance summary rather than a reproduction of the Unicode Standard text.
