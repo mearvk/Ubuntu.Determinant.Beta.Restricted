@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # GNOME Source Reference
 
 This directory contains the GNOME and GNOME-adjacent source components used by Ubuntu.Determinant.Beta.Restricted / Ubuntu White Edition.
