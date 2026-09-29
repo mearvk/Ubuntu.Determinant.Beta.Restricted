@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # GNU GCC source archive
 
 This directory reserves a local source-archive location for the GNU Compiler Collection (GCC) used by the repository's toolchain work.
