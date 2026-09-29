@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # X11 Visual Core & Desktop Icons
 
 Source tarballs for the X Window System display server, core libraries, and icon themes
