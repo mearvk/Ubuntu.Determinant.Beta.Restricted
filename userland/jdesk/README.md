@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # MEARVK Java Desktop Framework (JDesk)
 
 A cross-platform desktop environment framework that closely resembles the Linux kernel + X11 + Desktop profile. Runs on Linux, Windows, and macOS. Written in JavaFX, operates in full-screen mode with a white theme, and precisely uses the best methods of x86_64 processors.
