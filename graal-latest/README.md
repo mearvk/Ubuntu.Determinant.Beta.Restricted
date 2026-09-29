@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 [![GraalVM](.github/assets/logo_320x64.svg)][website]
 
 [![GraalVM downloads][badge-dl]][downloads] [![GraalVM docs][badge-docs]][docs] [![GraalVM on Slack][badge-slack]][slack] [![GraalVM Gate][badge-gate]][gate] [![License][badge-license]](#license) [![GraalVM on LinkedIn][badge-linkedin]][social-linkedin] [![GraalVM on X][badge-x]][social-x] [![GraalVM on Bluesky][badge-bluesky]][social-bluesky] [![GraalVM on Medium][badge-medium]][social-medium] [![GraalVM on YouTube][badge-yt]][social-youtube]
