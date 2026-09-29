@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # ctrmsctl 1.00
 
 `ctrmsctl` is a cautious Linux systemd filesystem-observation service. It maintains a light metadata index over a configured filesystem surface and exposes simple `find`, `search`, `locate`, and `status` commands.
