@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # tools/tac3 — `tac3ctl` userspace diagnostic
 
 `tac3ctl` is the userspace companion to the in-kernel **TAC3** filesystem
