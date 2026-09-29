@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # Coherent Professional Java Email Server
 
 **Author:** Max Rupplin - MEARVK LLC 2026
