@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 <p align=center>
   <a href="https://darlinghq.org/">
     <img alt="Darling logo" src="https://darlinghq.org/img/darling250.png">
