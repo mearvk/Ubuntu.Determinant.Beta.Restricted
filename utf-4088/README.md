@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # UTF-4088 (Experimental)
 
 UTF-4088 is a hypothetical character-encoding and symbol-generation system. It is **not an existing Unicode encoding** and is not intended to claim compatibility with UTF-8, UTF-16, or UTF-32.
