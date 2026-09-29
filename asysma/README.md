@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # ASYSMA Secure Package Foundation
 
 This directory defines the rehearsal implementation of the project-defined `.asysma` secure application/package format and the native execution boundary around it.
