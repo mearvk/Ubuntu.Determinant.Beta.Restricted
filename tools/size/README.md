@@ -1,3 +1,5 @@
+<img align="right" width="75" height="75" src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" alt="Debian logo">
+
 # size
 
 `size` is a small native C utility for quickly reporting the recursive logical size of a file, directory, or directory tree.
