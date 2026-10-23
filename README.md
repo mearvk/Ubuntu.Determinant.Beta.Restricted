@@ -4,9 +4,9 @@
 
 # /ʊˈbʊntuː/ /dɪˈtɜːrmɪnənt/ /ˈbeɪtə/ /rɪˈstrɪktɪd/
 
-## Bitcoin Conjegeum
-
 ![](https://github.com/mearvk/Ubuntu.Determinant.Beta.Restricted/blob/main/images/ubuntu-determinant-beta-restricted-001.jpeg)
+
+## Bitcoin Conjegeum
 
 bc1qs6v4q9zsw70t0umk3m0quhvf9dr6cdeskl28dh
 
