@@ -6,13 +6,13 @@
 
 ![](https://github.com/mearvk/Ubuntu.Determinant.Beta.Restricted/blob/main/images/ubuntu-determinant-beta-restricted-001.jpeg)
 
-## Bitcoin Conjegeum
+## I. Bitcoin Conjegeum
 
 bc1qs6v4q9zsw70t0umk3m0quhvf9dr6cdeskl28dh
 
 US Democratic and US Policy.
 
-## SecureJDK / Graal Proffer Project
+## II. SecureJDK / Graal Proffer Project
 
 This repository is an experimental systems project exploring a common security and modeling vocabulary across **SecureJDK, Graal, native C/C++, operating-system state, memory, process, geometry, time, provenance, and hardened historical/economic data**.
 
@@ -24,7 +24,7 @@ The project calls this framing **Proffer**.
 
 ---
 
-## Total: Three-Tier Native Moderator
+## III. Total: Three-Tier Native Moderator
 
 **Total** is the project's native C/C++ moderator layer. It sits between Linux kernel state and ordinary userland policy, with controlled cooperation from SecureJDK 28 and Graal.
 
@@ -80,7 +80,7 @@ See [`markdown/THREE_TIER.md`](markdown/THREE_TIER.md) for the detailed proving-
 
 ---
 
-## Domain Services
+## IV. Domain Services
 
 The same three-tier mechanism can support applications operating in regulated or sensitive commercial domains through explicit **domain-service adapters**. Initial examples include:
 
@@ -107,7 +107,7 @@ The full domain-adapter specification is in [`markdown/DOMAIN_SERVICES.md`](mark
 
 ---
 
-## JSpec Pixel Format (`.jpix`)
+## V. JSpec Pixel Format (`.jpix`)
 
 JSpec Pixel Format is an experimental pixel-native image representation built around a **Pixel Map**. It deliberately does not make the rectangular raster the semantic definition of an image.
 
@@ -293,7 +293,7 @@ Compression, additional pixel planes, depth, masks, and cached raster representa
 
 ---
 
-## The 300-IQ Framing
+## VI. The 300-IQ Framing
 
 “300 IQ” is used here as a project metaphor for **high-dimensional systems reasoning**, not as a scientific measurement of intelligence.
 
@@ -303,7 +303,7 @@ The project therefore treats **relative size of meaning** as important. A single
 
 ---
 
-## Core Vocabulary
+## VII. Core Vocabulary
 
 ### Fielter
 
@@ -323,7 +323,7 @@ A proposed transition carrying subject, origin, reason, capability, trust-domain
 
 ---
 
-## UTF-4088 Character System
+## VIII. UTF-4088 Character System
 
 `/utf-4088/` contains an experimental character and graph system built around a **16,606-symbol front end**, an 8×12 black/white glyph representation, historical language seeds, directed concept graphs, and a procedural 4D remainder space.
 
@@ -449,7 +449,7 @@ For a fixed canonical input, model version, graph state, historical prior, prime
 
 ---
 
-## Time and Opportunity Norming
+## IX. Time and Opportunity Norming
 
 The project also models the **observable cost of a selected transition**. A character or path selection may carry a modeled expenditure of time, opportunity, or normalization effort. This is an accounting/observability model—not a claim that an operating system can infer a person's moral worth or that it should impose an external penalty based on identity.
 
@@ -481,7 +481,7 @@ The minimum observable record should contain only the information needed to repr
 
 ---
 
-## SecureJDK 28 and Graal
+## X. SecureJDK 28 and Graal
 
 The project treats the current OpenJDK/Graal variant as **SecureJDK 28** and intends the security and provenance model to be native to the runtime rather than a bolt-on application library.
 
@@ -507,7 +507,7 @@ Supported Java programs may run through the SecureJDK/Graal path with Total prov
 
 ---
 
-## Native Git Operation Intelligence
+## XI. Native Git Operation Intelligence
 
 The vendored Git tree under `/tools/git/git/` now carries a native policy layer for repository operations. The policy is designed to supplement ordinary Git semantics with deterministic accounting, provenance, relevance, and administrative observations without pretending that metadata replaces Git's actual object graph.
 
@@ -558,7 +558,7 @@ Autocheck prepares transport work but does not silently push.
 
 ---
 
-## Moral Command
+## XII. Moral Command
 
 The repository also defines a small **`moral`** operation as a ceremonial software-blessing layer. It is intentionally separate from security authorization, identity assessment, correctness, and access control.
 
@@ -589,7 +589,7 @@ The intended invariant is simple:
 
 ---
 
-## Repository Status
+## XIII. Repository Status
 
 The project is experimental. Native Total, UTF-4088, JPIX, SecureJDK/Graal integration, domain-service adapters, and the native Git operation-policy layer should not be treated as production-certified merely because the architecture is complete on paper. The project prioritizes deterministic behavior, evidence, provenance, reproducibility, and auditable policy as it progresses toward a larger Linux framework.
 
@@ -598,7 +598,7 @@ For current repository maturity and remaining engineering work, see [`markdown/P
 
 ---
 
-## <img src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" width="25" height="25" alt="Debian"> II. Bitcoin Conjegeum
+## <img src="https://github.com/mearvk/SLeeLa/blob/master/images/debian-logo.png" width="25" height="25" alt="Debian"> XIV. Bitcoin Conjegeum
 
 ![CremeOak](https://github.com/mearvk/Java.Web.Server.Telnet.Front.Java.21/raw/main/images/national-bitcoin-icc-logo-005.jpg)
 
